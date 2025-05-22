@@ -1,0 +1,59 @@
+=== Basic Statistics ===
+       Cases Reported (2020)  Cases Reported (2021)  ...  Crime_Rate_Change_2022  Crime_Rate_3Y_Avg
+count              36.000000              36.000000  ...               36.000000          36.000000
+mean           104815.413194          101760.000000  ...                1.756750         244.256859
+std            128326.764898          118652.699382  ...               74.217464         216.130951
+min               107.000000              89.000000  ...             -195.200902          45.990991
+25%              2524.500000            2479.750000  ...              -11.398589         131.917744
+50%             50451.500000           47069.000000  ...                6.345579         188.758104
+75%            165794.250000          163026.250000  ...               22.986490         288.403029
+max            410698.875000          367218.000000  ...              261.252803        1329.423381
+
+[8 rows x 12 columns]
+
+=== Correlation Matrix ===
+                                        Cases Reported (2020)  ...  Crime_Rate_3Y_Avg
+Cases Reported (2020)                                1.000000  ...           0.497840
+Cases Reported (2021)                                0.980999  ...           0.561928
+Cases Reported (2022)                                0.883275  ...           0.564292
+Population                                           0.840901  ...           0.169655
+Rate of Cognizable Crimes (IPC) (2022)               0.458799  ...           0.787595
+Chargesheeting Rate (2022)                           0.193369  ...          -0.133896
+Crime_Rate_2020                                      0.582632  ...           0.967153
+Crime_Rate_2021                                      0.502828  ...           0.993975
+Crime_Rate_2022                                      0.386155  ...           0.967908
+Crime_Rate_Change_2021                              -0.112763  ...           0.397073
+Crime_Rate_Change_2022                              -0.292133  ...           0.071005
+Crime_Rate_3Y_Avg                                    0.497840  ...           1.000000
+
+[12 rows x 12 columns]
+
+=== Skewness ===
+Cases Reported (2020)                     1.191227
+Cases Reported (2021)                     0.964905
+Cases Reported (2022)                     1.064502
+Population                                1.149067
+Rate of Cognizable Crimes (IPC) (2022)    1.118603
+Chargesheeting Rate (2022)               -0.947494
+Crime_Rate_2020                           2.928166
+Crime_Rate_2021                           3.945573
+Crime_Rate_2022                           3.913575
+Crime_Rate_Change_2021                   -0.158170
+Crime_Rate_Change_2022                    0.061285
+Crime_Rate_3Y_Avg                         3.787493
+dtype: float64
+
+=== Kurtosis ===
+Cases Reported (2020)                      0.348578
+Cases Reported (2021)                     -0.309371
+Cases Reported (2022)                      0.155490
+Population                                 0.374953
+Rate of Cognizable Crimes (IPC) (2022)     0.904020
+Chargesheeting Rate (2022)                 0.104294
+Crime_Rate_2020                           11.878610
+Crime_Rate_2021                           19.776684
+Crime_Rate_2022                           18.579140
+Crime_Rate_Change_2021                     5.125789
+Crime_Rate_Change_2022                     5.500776
+Crime_Rate_3Y_Avg                         18.469567
+dtype: float64
