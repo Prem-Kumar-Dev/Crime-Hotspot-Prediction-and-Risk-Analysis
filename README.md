@@ -11,12 +11,6 @@ This project analyzes crime data across Indian states and predicts crime risk us
 ├── 📁 data/
 │   ├── 📄 raw_data.csv ← Original crime dataset
 │   └── 📄 cleaned_data.csv ← Preprocessed data
-├── 📁 notebooks/
-│   ├── 📄 1_data_cleaning.ipynb
-│   ├── 📄 2_feature_engineering.ipynb
-│   ├── 📄 3_eda.ipynb
-│   ├── 📄 4_model_training.ipynb
-│   └── 📄 5_evaluation.ipynb
 ├── 📁 scripts/
 │   ├── 📄 preprocessing.py
 │   ├── 📄 train_model.py
