@@ -11,6 +11,8 @@ from pathlib import Path
 from scipy import stats
 import geopandas as gpd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import matplotlib.ticker as mticker
 
 class GeoPlotter:
@@ -18,76 +20,87 @@ class GeoPlotter:
         self.df = df
         self.output_dir = Path("output/plots")
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.color_palette = px.colors.qualitative.Set3
+        self.template = "plotly_white"
         
     def plot_crime_trends(self):
-        """Plot crime rate trends by state"""
-        # Calculate crime rates per lakh population correctly (no multiplier needed)
-        crime_rates = self.df[['State/UT', 'Cases Reported (2020)', 'Cases Reported (2021)', 'Cases Reported (2022)', 'Population']].copy()
+        """Plot crime rate trends by state with interactive elements"""
+        # Calculate crime rates
+        crime_rates = self.df[['State/UT', 'Cases Reported (2020)', 'Cases Reported (2021)', 
+                             'Cases Reported (2022)', 'Population']].copy()
         
-        # Calculate rates per lakh population (population is already in lakhs)
         crime_rates['Crime_Rate_2020'] = crime_rates['Cases Reported (2020)'] / crime_rates['Population']
         crime_rates['Crime_Rate_2021'] = crime_rates['Cases Reported (2021)'] / crime_rates['Population']
         crime_rates['Crime_Rate_2022'] = crime_rates['Cases Reported (2022)'] / crime_rates['Population']
         
-        # Sort states by average crime rate for better visualization
-        crime_rates['Avg_Crime_Rate'] = crime_rates[['Crime_Rate_2020', 'Crime_Rate_2021', 'Crime_Rate_2022']].mean(axis=1)
-        crime_rates = crime_rates.sort_values('Avg_Crime_Rate', ascending=False)
+        # Create interactive plot using plotly
+        fig = go.Figure()
         
-        # Create the plot with larger figure size and more vertical space
+        years = ['2020', '2021', '2022']
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
+        
+        for year, color in zip(years, colors):
+            fig.add_trace(go.Bar(
+                name=year,
+                x=crime_rates['State/UT'],
+                y=crime_rates[f'Crime_Rate_{year}'],
+                marker_color=color,
+                hovertemplate="<b>%{x}</b><br>" +
+                            f"Crime Rate ({year}): %{{y:.2f}}<br>" +
+                            "Cases: %{customdata}<br>" +
+                            "<extra></extra>",
+                customdata=crime_rates[f'Cases Reported ({year})']
+            ))
+        
+        fig.update_layout(
+            title={
+                'text': "Crime Rate Trends by State (2020-2022)",
+                'y':0.95,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            xaxis_title="State/UT",
+            yaxis_title="Crime Rate (cases per lakh population)",
+            template=self.template,
+            barmode='group',
+            hovermode='closest',
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="center",
+                x=0.5
+            ),
+            height=600,
+            width=1000
+        )
+        
+        # Save interactive plot
+        fig.write_html(self.output_dir / 'crime_rate_trends_interactive.html')
+        
+        # Create static version
         plt.figure(figsize=(20, 12))
-        
-        # Create grouped bar plot
         x = np.arange(len(crime_rates['State/UT']))
         width = 0.25
         
-        plt.bar(x - width, crime_rates['Crime_Rate_2020'], width, label='2020', color='#1f77b4')
-        plt.bar(x, crime_rates['Crime_Rate_2021'], width, label='2021', color='#ff7f0e')
-        plt.bar(x + width, crime_rates['Crime_Rate_2022'], width, label='2022', color='#2ca02c')
+        plt.bar(x - width, crime_rates['Crime_Rate_2020'], width, label='2020', color=colors[0])
+        plt.bar(x, crime_rates['Crime_Rate_2021'], width, label='2021', color=colors[1])
+        plt.bar(x + width, crime_rates['Crime_Rate_2022'], width, label='2022', color=colors[2])
         
-        # Customize the plot with adjusted spacing
         plt.title('Crime Rate Trends by State (2020-2022)', fontsize=16, pad=30)
-        plt.suptitle('Crime Rate (cases per lakh population)', fontsize=12, y=0.98)
-        
-        # Format y-axis with reasonable numbers
-        def format_y_axis(x, pos):
-            return f'{x:.1f}'  # Show one decimal place
-        
-        plt.gca().yaxis.set_major_formatter(mticker.FuncFormatter(format_y_axis))
-        
-        # Set reasonable y-axis limits
-        plt.ylim(0, max(crime_rates[['Crime_Rate_2020', 'Crime_Rate_2021', 'Crime_Rate_2022']].max()) * 1.1)
-        
-        # Customize labels and ticks
         plt.xlabel('State/UT', fontsize=12, labelpad=10)
         plt.ylabel('Crime Rate (cases per lakh population)', fontsize=12, labelpad=10)
         plt.xticks(x, crime_rates['State/UT'], rotation=45, ha='right', fontsize=10)
-        plt.yticks(fontsize=10)
-        
-        # Add legend with better formatting
-        plt.legend(['2020', '2021', '2022'], title='Year', fontsize=10, title_fontsize=12, 
-                  bbox_to_anchor=(1.02, 1), loc='upper left')
-        
-        # Add grid for better readability
+        plt.legend(['2020', '2021', '2022'], title='Year', fontsize=10, title_fontsize=12)
         plt.grid(axis='y', linestyle='--', alpha=0.7)
-        
-        # Adjust layout with more padding
-        plt.tight_layout(rect=[0, 0.03, 0.95, 0.95])  # Adjust rect to make room for suptitle
-        
-        # Add explanatory text with adjusted position
-        plt.figtext(0.5, 0.01, 
-                    'Note: Crime Rate = (Number of Cases / Population in Lakhs)', 
-                    ha='center', fontsize=10, color='gray')
-        
-        # Save the plot with adjusted padding
-        plt.savefig(self.output_dir / 'crime_rate_trends.png', 
-                    bbox_inches='tight',
-                    pad_inches=0.5,
-                    dpi=300)
+        plt.tight_layout()
+        plt.savefig(self.output_dir / 'crime_rate_trends.png', dpi=300, bbox_inches='tight')
         plt.close()
-        
+
     def plot_correlation_heatmap(self):
-        """Plot correlation heatmap of crime metrics"""
-        plt.figure(figsize=(12, 10))
+        """Plot interactive correlation heatmap"""
         correlation_matrix = self.df[['Crime_Rate_2020', 'Crime_Rate_2021', 'Crime_Rate_2022',
                                     'Rate of Cognizable Crimes (IPC) (2022)',
                                     'Chargesheeting Rate (2022)',
@@ -95,14 +108,47 @@ class GeoPlotter:
                                     'Crime_Rate_Change_2022',
                                     'Crime_Rate_3Y_Avg']].corr()
         
+        # Create interactive heatmap
+        fig = go.Figure(data=go.Heatmap(
+            z=correlation_matrix.values,
+            x=correlation_matrix.columns,
+            y=correlation_matrix.columns,
+            colorscale='RdBu',
+            zmid=0,
+            text=correlation_matrix.round(2).values,
+            texttemplate='%{text}',
+            textfont={"size": 10},
+            hoverongaps=False
+        ))
+        
+        fig.update_layout(
+            title={
+                'text': "Correlation Matrix of Crime Metrics",
+                'y':0.95,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            template=self.template,
+            height=800,
+            width=1000,
+            xaxis={'tickangle': 45},
+            yaxis={'tickangle': 0}
+        )
+        
+        # Save interactive plot
+        fig.write_html(self.output_dir / 'correlation_heatmap_interactive.html')
+        
+        # Create static version
+        plt.figure(figsize=(12, 10))
         mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
         sns.heatmap(correlation_matrix, mask=mask, annot=True, cmap='coolwarm', 
                    center=0, fmt='.2f', square=True)
         plt.title('Correlation Matrix of Crime Metrics', fontsize=16)
         plt.tight_layout()
-        plt.savefig(self.output_dir / 'correlation_heatmap.png')
+        plt.savefig(self.output_dir / 'correlation_heatmap.png', dpi=300)
         plt.close()
-        
+
     def plot_top_crime_states(self):
         """Plot top 10 states by crime rate"""
         plt.figure(figsize=(12, 6))
@@ -117,7 +163,42 @@ class GeoPlotter:
         plt.close()
         
     def plot_feature_importance(self, feature_names, importance_scores):
-        """Plot feature importance from the model"""
+        """Plot interactive feature importance"""
+        # Create interactive bar plot
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            x=importance_scores,
+            y=feature_names,
+            orientation='h',
+            marker_color=self.color_palette,
+            text=importance_scores.round(3),
+            textposition='auto',
+            hovertemplate="<b>%{y}</b><br>" +
+                        "Importance: %{x:.3f}<br>" +
+                        "<extra></extra>"
+        ))
+        
+        fig.update_layout(
+            title={
+                'text': "Feature Importance in Crime Rate Prediction",
+                'y':0.95,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            xaxis_title="Importance Score",
+            yaxis_title="Feature",
+            template=self.template,
+            height=600,
+            width=800,
+            showlegend=False
+        )
+        
+        # Save interactive plot
+        fig.write_html(self.output_dir / 'feature_importance_interactive.html')
+        
+        # Create static version
         plt.figure(figsize=(10, 6))
         importance_df = pd.DataFrame({
             'Feature': feature_names,
@@ -130,38 +211,102 @@ class GeoPlotter:
         plt.xlabel('Importance Score', fontsize=14)
         plt.ylabel('Feature', fontsize=14)
         plt.tight_layout()
-        plt.savefig(self.output_dir / 'feature_importance.png')
+        plt.savefig(self.output_dir / 'feature_importance.png', dpi=300)
         plt.close()
         
     def plot_distribution_analysis(self):
-        """Plot distribution analysis of crime rates"""
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+        """Create interactive distribution analysis plots"""
+        # Create subplots
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=(
+                'Distribution of Crime Rates (2022)',
+                'Crime Rate Distribution by Year',
+                'Population vs Crime Rate (2022)',
+                'Year-over-Year Changes (2021-2022)'
+            )
+        )
         
         # Distribution of 2022 crime rates
-        sns.histplot(data=self.df, x='Crime_Rate_2022', kde=True, ax=ax1)
-        ax1.set_title('Distribution of Crime Rates (2022)', fontsize=16)
-        ax1.set_xlabel('Crime Rate per Lakh Population', fontsize=14)
+        fig.add_trace(
+            go.Histogram(
+                x=self.df['Crime_Rate_2022'],
+                name='2022',
+                marker_color=self.color_palette[0]
+            ),
+            row=1, col=1
+        )
         
         # Box plot of crime rates by year
+        for year, color in zip(['2020', '2021', '2022'], self.color_palette[:3]):
+            fig.add_trace(
+                go.Box(
+                    y=self.df[f'Crime_Rate_{year}'],
+                    name=year,
+                    marker_color=color
+                ),
+                row=1, col=2
+            )
+        
+        # Scatter plot of population vs crime rate
+        fig.add_trace(
+            go.Scatter(
+                x=self.df['Population'],
+                y=self.df['Crime_Rate_2022'],
+                mode='markers',
+                marker=dict(
+                    color=self.df['Crime_Rate_2022'],
+                    colorscale='Reds',
+                    showscale=True
+                ),
+                text=self.df['State/UT'],
+                name='States'
+            ),
+            row=2, col=1
+        )
+        
+        # Year-over-year changes
+        fig.add_trace(
+            go.Box(
+                y=self.df['Crime_Rate_Change_2022'],
+                name='2021-2022',
+                marker_color=self.color_palette[3]
+            ),
+            row=2, col=2
+        )
+        
+        fig.update_layout(
+            height=1000,
+            width=1200,
+            template=self.template,
+            showlegend=False,
+            title_text="Distribution Analysis of Crime Rates",
+            title_x=0.5
+        )
+        
+        # Save interactive plot
+        fig.write_html(self.output_dir / 'distribution_analysis_interactive.html')
+        
+        # Create static version
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+        
+        sns.histplot(data=self.df, x='Crime_Rate_2022', kde=True, ax=ax1)
+        ax1.set_title('Distribution of Crime Rates (2022)')
+        
         crime_rates = pd.melt(self.df, 
                             value_vars=['Crime_Rate_2020', 'Crime_Rate_2021', 'Crime_Rate_2022'],
                             var_name='Year', value_name='Crime Rate')
         sns.boxplot(data=crime_rates, x='Year', y='Crime Rate', ax=ax2)
-        ax2.set_title('Crime Rate Distribution by Year', fontsize=16)
+        ax2.set_title('Crime Rate Distribution by Year')
         
-        # Scatter plot of population vs crime rate
         sns.scatterplot(data=self.df, x='Population', y='Crime_Rate_2022', ax=ax3)
-        ax3.set_title('Population vs Crime Rate (2022)', fontsize=16)
-        ax3.set_xlabel('Population', fontsize=14)
-        ax3.set_ylabel('Crime Rate per Lakh Population', fontsize=14)
+        ax3.set_title('Population vs Crime Rate (2022)')
         
-        # Year-over-year changes
         sns.boxplot(data=self.df, y='Crime_Rate_Change_2022', ax=ax4)
-        ax4.set_title('Distribution of Year-over-Year Changes (2021-2022)', fontsize=16)
-        ax4.set_ylabel('Change in Crime Rate', fontsize=14)
+        ax4.set_title('Year-over-Year Changes (2021-2022)')
         
         plt.tight_layout()
-        plt.savefig(self.output_dir / 'distribution_analysis.png')
+        plt.savefig(self.output_dir / 'distribution_analysis.png', dpi=300)
         plt.close()
         
     def plot_anomaly_detection(self):
@@ -192,29 +337,58 @@ class GeoPlotter:
         plt.close()
         
     def plot_state_wise_map(self):
-        """Create choropleth map of crime rates by state"""
+        """Create interactive choropleth map of crime rates"""
         try:
-            gdf = gpd.read_file('india_GeoJSON.json')
+            gdf = gpd.read_file('India_GeoJSON.json')
             merged = gdf.merge(self.df, left_on='name', right_on='State/UT', how='left')
+            
+            # Create interactive choropleth map
+            fig = px.choropleth(
+                merged,
+                geojson=merged.geometry,
+                locations=merged.index,
+                color='Crime_Rate_2022',
+                hover_name='State/UT',
+                hover_data={
+                    'Crime_Rate_2022': ':.2f',
+                    'Cases Reported (2022)': True,
+                    'Population': True
+                },
+                color_continuous_scale='Reds',
+                title='Crime Rate by State (2022)',
+                template=self.template
+            )
+            
+            fig.update_geos(
+                fitbounds="locations",
+                visible=False
+            )
+            
+            fig.update_layout(
+                height=800,
+                width=1000,
+                margin={"r":0,"t":30,"l":0,"b":0}
+            )
+            
+            # Save interactive plot
+            fig.write_html(self.output_dir / 'state_wise_map_interactive.html')
+            
+            # Create static version
             fig, ax = plt.subplots(1, 1, figsize=(14, 14))
-            cbar = merged.plot(column='Crime_Rate_2022', cmap='Reds', linewidth=0.8, ax=ax, edgecolor='0.8', legend=True)
+            merged.plot(
+                column='Crime_Rate_2022',
+                cmap='Reds',
+                linewidth=0.8,
+                ax=ax,
+                edgecolor='0.8',
+                legend=True
+            )
             ax.set_title('Crime Rate by State (2022)', fontdict={'fontsize': 18})
             ax.axis('off')
-            # Format colorbar to Indian number system
-            colorbar = cbar.get_figure().axes[-1]
-            def indian_fmt(x, pos):
-                if x >= 1e7:
-                    return f'{x/1e7:.1f} Cr'
-                elif x >= 1e5:
-                    return f'{x/1e5:.1f} L'
-                elif x >= 1e3:
-                    return f'{x/1e3:.1f} K'
-                else:
-                    return f'{x:.0f}'
-            colorbar.yaxis.set_major_formatter(mticker.FuncFormatter(indian_fmt))
             plt.tight_layout()
-            plt.savefig(self.output_dir / 'state_wise_map.png', bbox_inches='tight', pad_inches=0.3)
+            plt.savefig(self.output_dir / 'state_wise_map.png', dpi=300, bbox_inches='tight')
             plt.close()
+            
         except Exception as e:
             print(f"Warning: Could not create state-wise map: {str(e)}")
             print("Continuing with other visualizations...")
